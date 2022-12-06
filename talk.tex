@@ -598,20 +598,23 @@ ACWB. We refer to the publication for details about the algorithms.
   For example:
 \end{itemize}
 
-\vspace{-0.4cm}
 \begin{minipage}{0.75\textwidth}
 {\tiny $
-\bm{Z}_{\text{age}} = \begin{pmatrix}
-    0 & 0 & 0 & 0 & 0 & 0 & 0  \\
+\underbrace{\begin{pmatrix} 80 \\ 31 \\ \vdots \\ 28 \\ 49 \end{pmatrix}}_{= \bm{x}_{\text{age}}}
+$}
+{\Large $\Rightarrow$}
+{\tiny $
+\underbrace{\begin{pmatrix}
+    0 & 0 & 0 & 0.04 & 0.56 & 0.39 & 0.01  \\
     0.02 & 0.45 & 0.51 & 0.03 & 0 & 0 & 0 \\
     & & & \vdots & & & \\
     0.13 & 0.66 & 0.21 & 0 & 0 & 0 & 0 \\
-    & 0 & 0 & 0 & 0.03 & 0.53 & 0.43 & 0.01
-\end{pmatrix}
+    0 & 0 & 0.03 & 0.53 & 0.43 & 0.01 & 0
+\end{pmatrix}}_{=\bm{Z}_{\text{age}}\ \text{(B-spline basis)}}
 $}\hspace{0.2cm}{\Large $\Rightarrow$}
 \end{minipage}
 \begin{minipage}{0.2\textwidth}
-\phantom{a}\vspace{0.4cm}\hspace*{0.5cm}
+\phantom{a}\vspace{-0.2cm}\hspace*{0.5cm}
 
 \includegraphics[width=3cm]{figures/unnamed-chunk-2-1} 
 \end{minipage}
@@ -666,13 +669,33 @@ $}\hspace{0.2cm}{\Large $\Rightarrow$}
   Represent numerical features \(\bm{x}_k\) by \(n^\ast\) design points
   \(\bm{z}_k\).
 \item
-  Build the design matrix \(\bm{Z}_k\) based on \(\bm{z}_k\) which
+  Build the design matrix \(\bm{Z}_k^\ast\) based on \(\bm{z}_k\) which
   requires to store \(n^\ast d_k\) values instead of \(nd_k\).
 \item
   Use optimized cross-product operations to estimate the parameters
-  \(\tbh_k^{[m]} = (\bm{Z}_k^\tran \bm{Z}_k + \bm{K}_k)^{-1}\bm{Z}_k^\tran \rmm\)
-  of a base learner to also speed up the fitting.
+  \(\tbh_k^{[m]}\) of base learner \(b_k\) to also speed up the fitting.
 \end{itemize}
+
+\begin{minipage}{0.75\textwidth}
+{\tiny $
+\underbrace{\begin{pmatrix} 15 \\ 32 \\ 50 \\ 67 \\ 84 \end{pmatrix}}_{= \bm{z}_{\text{age}}}
+$}
+{\Large $\Rightarrow$}
+{\tiny $
+\underbrace{\begin{pmatrix}
+    0.17 & 0.67 & 0.17 & 0    & 0    & 0    & 0    \\
+    0    & 0.34 & 0.59 & 0.06 & 0    & 0    & 0    \\
+    0    & 0    & 0.01 & 0.43 & 0.53 & 0.01 & 0    \\
+    0    & 0    & 0    & 0.06 & 0.59 & 0.34 & 0    \\
+    0    & 0    & 0    & 0    & 0.17 & 0.67 & 0.17
+\end{pmatrix}}_{=\bm{Z}^\ast_{\text{age}}\ \text{(B-spline basis)}}
+$}\hspace{0.2cm}{\Large $\Rightarrow$}
+\end{minipage}
+\begin{minipage}{0.2\textwidth}
+\phantom{a}\vspace{-0.2cm}\hspace*{0.5cm}
+
+\includegraphics[width=3cm]{figures/unnamed-chunk-4-1} 
+\end{minipage}
 \end{frame}
 
 \hypertarget{application-to-data}{%
@@ -682,7 +705,7 @@ $}\hspace{0.2cm}{\Large $\Rightarrow$}
 \protect\hypertarget{benchmark}{}
 \begin{figure}
 \centering
-\includegraphics[width=\textwidth]{figures/fig-eq2-2.pdf}
+\includegraphics[width=1.1\textwidth]{figures/fig-eq2-2.pdf}
 \end{figure}
 \end{frame}
 
