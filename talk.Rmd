@@ -82,13 +82,13 @@ ggcountry = ggplot(dfcountry, aes(x, y)) + geom_boxplot() + xlab("country") + yl
 
 ## About the project
 
-- Component-wise boosting \citep[CWB;][]{buhlmann2003boosting,buhlmann2007boosting} is a boosting method based on multiple base learners.
+- Component-wise boosting \citep[CWB;][]{buhlmann2003boosting,buhlmann2007boosting} is a method that ensembles weak base learners to a strong learner.
 - Utilizing interpretable statistical models as base learners makes the fitted model interpretable.
-- Also, CWB is can fit models in high dimensional features spaces ($n \ll p$) and provides an inherent (unbiased) feature selection.
+- Also, CWB can fit models in high dimensional features spaces ($n \ll p$) and provides an inherent (unbiased) feature selection.
 - But, depending on the size of the data, it is infeasible to fit the algorithm w.r.t runtime or memory allocation.
 
 \begin{itemize}
-\item[$\Rightarrow$] \textbf{Goal:} Fasten the fitting process and reduce the memory consumption without loosing predictive or estimation accuracy.
+\item[$\Rightarrow$] \textbf{Goal:} Speed up the fitting process and reduce the memory consumption without loosing predictive or estimation accuracy.
 \end{itemize}
 
 ## CWB basics I
@@ -103,7 +103,7 @@ ggcountry = ggplot(dfcountry, aes(x, y)) + geom_boxplot() + xlab("country") + yl
 - Example throughout the talk:
     - Three features $x_{\text{age}}$, $x_{\text{country}}$, and $x_{\text{income}}$
     - Response $Y$ is a numeric score for "happiness"
-    - Aim: Model $Y$ with $b_{\text{age}}$ a P-spline, $b_{\text{income}}$ a P-spline and $b_{\text{country}}$ a one-hot encoding
+    - Aim: Model $Y$ with $b_{\text{age}}$ a P-spline, $b_{\text{income}}$ a P-spline and $b_{\text{country}}$ a categorical effect
 
 ```{r, echo=FALSE, fig.width=9, fig.height=2, out.widht="0.9\textwidth", fig.align="center"}
 ggage + ggincome + ggcountry
@@ -159,7 +159,7 @@ ggage + ggincome + ggcountry
 
 $\Rightarrow$ Increase CWB's efficiency:
 
-- __Acceleration:__ Fasten the fitting process by using Nesterovs momentum.
+- __Acceleration:__ Speed up the fitting process by using Nesterovs momentum.
 - __Memory:__ Reduce the memory consumption by discretizing numerical features.
 
 # Acceleration
@@ -172,7 +172,7 @@ __Gradient descent:__
 \vspace{0.2cm}
 {\small
 \begin{tabular}{ccc}
-  Parameter space & & Functional space \\[0.3cm]
+  Parameter space & & Function space \\[0.3cm]
   $\tbh^{[m+1]} = \tbh^{[m]} + \nu \nabla_{\tb}\riske(\fh(. | \tbh^{[m]}) | \D)$ & $\Rightarrow$ & $\fh^{[m+1]} = \fmh + \nu \hat{b}^{[m]}$
 \end{tabular}}
 \vspace{0.2cm}
@@ -185,7 +185,7 @@ __Nesterov momentum:__
 \vspace{0.2cm}
 {\small
 \begin{tabular}{ccc}
-  Parameter space & & Functional space \\[0.3cm]
+  Parameter space & & Function space \\[0.3cm]
   $\bm{u}^{[m]} = \nabla_{\tb}\riske(\fh(. | \tbh^{[m]} - \gamma \hat{\bm{\vartheta}}^{[m-1]} | \D)$ &  & \\
   $\hat{\bm{\vartheta}}^{[m]} = \gamma \hat{\bm{\vartheta}}^{[m-1]} + \nu \bm{u}^{[m]}$ & $\Rightarrow$ & ??? \\
   $\tbh^{[m+1]} = \tbh^{[m]} + \hat{\bm{\vartheta}}^{[m]}$ & &
@@ -193,7 +193,9 @@ __Nesterov momentum:__
 \vspace{0.2cm}
 ```
 
-$\Rightarrow$ __Idea:__ Use Nestervos momentum and adjust it for functional updates and CWB.
+\begin{itemize}
+\item[$\Rightarrow$] \textbf{Idea:} Use Nestervos momentum and adjust it for functional updates and CWB.
+\end{itemize}
 
 ## Nesterovs momentum in function space
 
@@ -224,11 +226,11 @@ In \citet{schalk2022accelerated}, we proposed an accelerated CWB (ACWB) version 
 - Both base learners, $b^{[m]}$ and $b^{[m]}_{\text{cor}}$, are the result of a selection process that chooses one of $b_1, \dots, b_K$ w.r.t. to the minimal SSE on the respective pseudo residuals $\rmm$ and $\bm{c}^{[m]}$.
 - Update the estimated parameters accordingly to allow the estimation of partial feature effects.
 
-Considering these issues allows to maintain all advantages of CWB in ACWB. We refer to the publication for details about the algorithms.
+Considering these techniques allows to maintain all advantages of CWB in ACWB. We refer to the publication for details about the algorithms.
 
 ## Hybrid CWB
 
-- We observed, that ACWB can overfit if not stopped early.
+- It was proven by \citet{lu2020accelerating}, that ACWB can overfit if not stopped early.
 - Therefore, we combined ACWB with CWB to accelerate the fitting in the beginning and fine-tune the model using CWB:
 
 \begin{figure}

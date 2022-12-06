@@ -334,13 +334,13 @@ representation and momentum-based optimization}
 \tightlist
 \item
   Component-wise boosting
-  \citep[CWB;][]{buhlmann2003boosting,buhlmann2007boosting} is a
-  boosting method based on multiple base learners.
+  \citep[CWB;][]{buhlmann2003boosting,buhlmann2007boosting} is a method
+  that ensembles weak base learners to a strong learner.
 \item
   Utilizing interpretable statistical models as base learners makes the
   fitted model interpretable.
 \item
-  Also, CWB is can fit models in high dimensional features spaces
+  Also, CWB can fit models in high dimensional features spaces
   (\(n \ll p\)) and provides an inherent (unbiased) feature selection.
 \item
   But, depending on the size of the data, it is infeasible to fit the
@@ -348,7 +348,7 @@ representation and momentum-based optimization}
 \end{itemize}
 
 \begin{itemize}
-\item[$\Rightarrow$] \textbf{Goal:} Fasten the fitting process and reduce the memory consumption without loosing predictive or estimation accuracy.
+\item[$\Rightarrow$] \textbf{Goal:} Speed up the fitting process and reduce the memory consumption without loosing predictive or estimation accuracy.
 \end{itemize}
 \end{frame}
 
@@ -386,7 +386,7 @@ representation and momentum-based optimization}
   \item
     Aim: Model \(Y\) with \(b_{\text{age}}\) a P-spline,
     \(b_{\text{income}}\) a P-spline and \(b_{\text{country}}\) a
-    one-hot encoding
+    categorical effect
   \end{itemize}
 \end{itemize}
 
@@ -468,7 +468,7 @@ representation and momentum-based optimization}
 \begin{itemize}
 \tightlist
 \item
-  \textbf{Acceleration:} Fasten the fitting process by using Nesterovs
+  \textbf{Acceleration:} Speed up the fitting process by using Nesterovs
   momentum.
 \item
   \textbf{Memory:} Reduce the memory consumption by discretizing
@@ -486,7 +486,7 @@ representation and momentum-based optimization}
 \vspace{0.2cm}
 {\small
 \begin{tabular}{ccc}
-  Parameter space & & Functional space \\[0.3cm]
+  Parameter space & & Function space \\[0.3cm]
   $\tbh^{[m+1]} = \tbh^{[m]} + \nu \nabla_{\tb}\riske(\fh(. | \tbh^{[m]}) | \D)$ & $\Rightarrow$ & $\fh^{[m+1]} = \fmh + \nu \hat{b}^{[m]}$
 \end{tabular}}
 \vspace{0.2cm}
@@ -496,15 +496,16 @@ representation and momentum-based optimization}
 \vspace{0.2cm}
 {\small
 \begin{tabular}{ccc}
-  Parameter space & & Functional space \\[0.3cm]
+  Parameter space & & Function space \\[0.3cm]
   $\bm{u}^{[m]} = \nabla_{\tb}\riske(\fh(. | \tbh^{[m]} - \gamma \hat{\bm{\vartheta}}^{[m-1]} | \D)$ &  & \\
   $\hat{\bm{\vartheta}}^{[m]} = \gamma \hat{\bm{\vartheta}}^{[m-1]} + \nu \bm{u}^{[m]}$ & $\Rightarrow$ & ??? \\
   $\tbh^{[m+1]} = \tbh^{[m]} + \hat{\bm{\vartheta}}^{[m]}$ & &
 \end{tabular}}
 \vspace{0.2cm}
 
-\(\Rightarrow\) \textbf{Idea:} Use Nestervos momentum and adjust it for
-functional updates and CWB.
+\begin{itemize}
+\item[$\Rightarrow$] \textbf{Idea:} Use Nestervos momentum and adjust it for functional updates and CWB.
+\end{itemize}
 \end{frame}
 
 \begin{frame}{Nesterovs momentum in function space}
@@ -562,7 +563,7 @@ version by incorporating these adaptions to CWB, therefore:
   partial feature effects.
 \end{itemize}
 
-Considering these issues allows to maintain all advantages of CWB in
+Considering these techniques allows to maintain all advantages of CWB in
 ACWB. We refer to the publication for details about the algorithms.
 \end{frame}
 
@@ -571,7 +572,8 @@ ACWB. We refer to the publication for details about the algorithms.
 \begin{itemize}
 \tightlist
 \item
-  We observed, that ACWB can overfit if not stopped early.
+  It was proven by \citet{lu2020accelerating}, that ACWB can overfit if
+  not stopped early.
 \item
   Therefore, we combined ACWB with CWB to accelerate the fitting in the
   beginning and fine-tune the model using CWB:
