@@ -1,0 +1,344 @@
+---
+title: Accelerated component-wise gradient boosting using efficient data representation and momentum-based optimization
+author: D. Schalk, B. Bischl, D. Rügamer
+date: 17th, Dec. 2022
+output:
+  beamer_presentation:
+    keep_tex: true
+    includes:
+      in_header: "style/preamble_reisensburg.sty"
+    template: "style/custom_pandoc.tex"
+---
+
+```{r setup, include=FALSE}
+options(width = 80)
+
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>",
+  fig.path = "figures/"
+)
+
+library(ggplot2)
+library(ggsci)
+library(ggthemes)
+library(patchwork)
+
+set.seed(31415)
+
+matToTex = function(mat) {
+  rows = paste0("\t", apply(mat, MARGIN = 1, paste, collapse = " & "))
+  matrix_string = paste(rows, collapse = " \\\\\n ")
+  return(paste("\\begin{pmatrix}\n", matrix_string, "\n\\end{pmatrix}"))
+}
+
+ggplot2::theme_set(theme_few())
+scale_colour_discrete = function(...) scale_color_aaas(...)
+
+x = c(15, 20, 25, 30, 50, 70, 84)
+y = c(8,   0, -4,  0,  4,  6,  5)
+
+m1 = lm(y ~ poly(x, 4))
+
+## SIMULATION:
+nsim = 1000L
+xage = sample(seq(15, 84), nsim, replace = TRUE)
+fage = predict(m1, data.frame(x = xage))
+xcountry = sample(c("DE", "AT", "GB", "ES", "FR"), nsim, replace = TRUE)
+ecountry = c(DE = -2, AT = 4, GB = -1, ES = 2, FR = 0)
+fcountry = ecountry[xcountry]
+xincome = sample(seq(700, 5000), nsim, replace = TRUE)
+
+yhappiness = 2 + fage + fcountry + rnorm(nsim, 0, 1)
+r0 = yhappiness - mean(yhappiness)
+
+library(cpsp)
+
+knotsincome = createKnots(xincome, 10, 3)
+Zincome = createSplineBasis(xincome, 3, knotsincome)
+Kincome = penaltyMat(nparams = ncol(Zincome), differences = 2)
+penincome = demmlerReinsch(t(Zincome) %*% Zincome, Kincome, 5)
+bincome = solve(t(Zincome) %*% Zincome + penincome * Kincome) %*% t(Zincome) %*% r0
+
+knotsage = createKnots(xage, 10, 3)
+Zage = createSplineBasis(xage, 3, knotsage)
+Kage = penaltyMat(nparams = ncol(Zage), differences = 2)
+penage = demmlerReinsch(t(Zage) %*% Zage, Kage, 5)
+bage = solve(t(Zage) %*% Zage + penage * Kage) %*% t(Zage) %*% r0
+
+oage = order(xage)
+oincome = order(xincome)
+
+dfincome = data.frame(x = sort(xincome), y = Zincome[oincome, ] %*% bincome)
+dfage = data.frame(x = sort(xage), y = Zage[oage, ] %*% bage)
+dfcountry = data.frame(x = names(ecountry), y = unname(ecountry))
+
+ggage = ggplot(dfage, aes(x, y)) + geom_line() + xlab("age") + ylab(expression(b[age](x)))
+ggincome = ggplot(dfincome, aes(x, y)) + geom_line() + xlab("income") + ylab(expression(b[income](x)))
+ggcountry = ggplot(dfcountry, aes(x, y)) + geom_boxplot() + xlab("country") + ylab(expression(b[country](x)))
+```
+
+# Background
+
+## About the project
+
+- Component-wise boosting \citep[CWB;][]{buhlmann2003boosting,buhlmann2007boosting} is a boosting method based on multiple base learners.
+- Utilizing interpretable statistical models as base learners makes the fitted model interpretable.
+- Also, CWB is can fit models in high dimensional features spaces and provides an inherent (unbiased) feature selection.
+- But, depending on the size of the data, it is infeasible to fit the algorithm w.r.t runtime or memory allocation.
+
+\begin{itemize}
+\item[$\Rightarrow$] \textbf{Goal:} Fasten the fitting process and reduce the memory consumption without loosing predictive or estimation accuracy.
+\end{itemize}
+
+## CWB basics I
+
+- Feature vector $\bm{x} = (x_1, \dots, x_p)\in\mathcal{X}$
+- CWB fits a model $\fh$ based on an additive structure $$\mathbb{E}[Y|\bm{x}] = \fh(\bm{x}) = f_0 + \sum_{k=1}^K b_k(\bm{x}).$$ Hence, CWB can be used as fitting engine for GAMs.
+- $K$ additive terms represented by base learner $b_k : \mathcal{X} \to \mathbb{R}$. Often one base learner per feature is used to model univariate effects.
+
+
+## CWB basics II
+
+- Example throughout the talk:
+    - Three features $x_{\text{age}}$, $x_{\text{country}}$, and $x_{\text{income}}$
+    - Response $Y$ is a numeric score for "happiness"
+    - Aim: Model $Y$ with $b_{\text{age}}$ a P-spline, $b_{\text{income}}$ a P-spline and $b_{\text{country}}$ a one-hot encoding
+
+```{r, echo=FALSE, fig.width=9, fig.height=2, out.widht="0.9\textwidth", fig.align="center"}
+ggage + ggincome + ggcountry
+```
+
+## CWB algorithm I
+
+- Given is a data set $\D$ with $n$ observations and $p$ features, a loss function $L(y, \hat{y})$, and a set of base learners $b_1, \dots, b_\blK$.
+- The gaol of fitting CWB is to minimize the empirical risk $\riske(\fh | \D) = n^{-1}\sum_{(x,y)\in\D} L(y, \fh(x))$.
+- The algorithm is initialized with a loss-optimal constant $c$ that minimizes the empirical risk: $$f_0 = \fh^{[0]}(\xv) = \argmin_{c\in\mathcal{Y}}\riske(c|\D)$$
+- Model updates are calculated by functional gradient descent: $$\fh^{[m+1]} = \fmh + \nu \hat{b}^{[m]}$$
+
+## CWB algorithm II
+
+- The negative functional gradient is expressed by pseudo residuals: $$\rmi = -\nabla_f L(y^{(i)}, f(\xi))|_{f = \fmdh},\ i \in \{1, \dots, n\}$$
+- In CWB, each base learner $b_1, \dots, b_K$ is fitted to $\rmm$ and the one with the lowest sum of squared errors (SSE) is chosen as new component $\hat{b}^{[m]}$.
+- The last two step are repeated $M$ times.
+
+
+## CWB algorithm III
+
+```{=latex}
+\begin{algorithm}[H]
+
+\footnotesize
+
+\caption{Vanilla CWB algorithm}\label{algo:cwb}
+\vspace{0.15cm}
+\hspace*{\algorithmicindent} \textbf{Input} Train data $\D$, learning rate $\nu$, number of boosting iterations $M$, loss\\
+\hspace*{\algorithmicindent} \phantom{\textbf{Input} } function $L$, base learners $b_1, \dots, b_\blK$\\
+\hspace*{\algorithmicindent} \textbf{Output} Model $\fh = \hat{f}^{[M]}$, estimated coefficient vectors $\tbih{1}, \ldots, \tbih{M}$\vspace{0.15cm}
+\hrule
+
+\begin{algorithmic}[1]
+\Procedure{$\operatorname{CWB}$}{$\D,\nu,L,b_1, \dots, b_\blK$}
+    \State Initialize: $f_0 = \fh^{[0]}(\xv) = \argmin_{c\in\mathcal{Y}}\riske(c|\D)$
+    \While{$m \leq M$}
+        \State $\rmi = -\left.\pd{\Lxyi}{f(\xi)}\right|_{f = \fmdh},\ \ \forall i \in \{1, \dots, n\}$%\label{algo:cwb:line:pr}
+        \For{$\blk \in \{1, \dots, \blK\}$}
+            \State $\tbmh_\blk = \left(\design_\blk^\tran \design_\blk + \bm{K}_\blk\right)^{-1} \design^\tran_\blk \rmm$%\label{algo:cwb:line:fitbl}
+            \State $\sse_\blk = \sum_{i=1}^n(\rmi - b_\blk(\xi | \tbmh_\blk))^2$% \label{algo:cwb:line:sse}
+        \EndFor
+        \State $\blk^{[m]} = \argmin_{\blk\in\{1, \dots, \blK\}} \sse_\blk$% \label{algo:cwb:line:blselection}
+        \State $\fmh(\xv) = \fmdh(\xv) + \nu b_{\blk^{[m]}} (\xv | \tbmh_{\blk^{[m]}})$
+    \EndWhile
+    \State \textbf{return} $\fh = \fh^{[M]}$
+\EndProcedure
+\end{algorithmic}
+\end{algorithm}
+```
+
+## CWB advantages
+
+- Can be fit in high dimensional feature spaces ($n \ll p$).
+- Variable selection (unbiased).
+- Estimation of partial feature effect that allows an interpretation of the final model.
+
+## Goal
+
+For bigger data sets it is often infeasible to fit CWB.
+
+$\Rightarrow$ Increase CWB's efficiency:
+
+- __Acceleration:__ Fasten the fitting by using other optimizer.
+- __Memory:__ Reduce the memory consumption.
+
+# Acceleration
+
+## Nesterovs momentum
+
+__Gradient descent:__
+
+```{=latex}
+\vspace{0.2cm}
+{\small
+\begin{tabular}{ccc}
+  Parameter space & & Functional space \\[0.3cm]
+  $\tbh^{[m+1]} = \tbh^{[m]} + \nu \nabla_{\tb}\riske(\fh(. | \tbh^{[m]}) | \D)$ & $\Rightarrow$ & $\fh^{[m+1]} = \fmh + \nu \hat{b}^{[m]}$
+\end{tabular}}
+\vspace{0.2cm}
+```
+
+__Nesterov momentum:__
+
+
+```{=latex}
+\vspace{0.2cm}
+{\small
+\begin{tabular}{ccc}
+  Parameter space & & Functional space \\[0.3cm]
+  $\bm{u}^{[m]} = \nabla_{\tb}\riske(\fh(. | \tbh^{[m]} - \gamma \hat{\bm{\vartheta}}^{[m-1]} | \D)$ &  & \\
+  $\hat{\bm{\vartheta}}^{[m]} = \gamma \hat{\bm{\vartheta}}^{[m-1]} + \nu \bm{u}^{[m]}$ & $\Rightarrow$ & ??? \\
+  $\tbh^{[m+1]} = \tbh^{[m]} + \hat{\bm{\vartheta}}^{[m]}$ & &
+\end{tabular}}
+\vspace{0.2cm}
+```
+
+$\Rightarrow$ __Idea:__ Use Nestervos momentum and adjust it for functional updates and CWB.
+
+## Nesterovs momentum in function space
+
+- \citet{biau2019accelerated} proposed an adjustment of gradient boosting with Nesterovs momentum as optimizer.
+- \citet{lu2020accelerating} lined out that this approach may diverge and proposed an corrected algorithm Accelerated Gradient Boosting Machine (AGBM):
+```{=latex}
+\vspace{-0.9cm}
+\begin{align*}
+g^{[m]} &= (1 - \theta_m) f^{[m]} + \theta_m h^{[m]}\\
+f^{[m+1]} &= g^{[m]} + \eta b^{[m]} \\
+h^{[m+1]} &= h^{[m]} + \eta / \theta_m b^{[m]}_{\text{cor}}
+\end{align*}
+```
+
+with $\theta_m = 2 / (m + 1)$ and $h^{[m]}$ the momentum sequence.
+
+## Base learners in AGBM
+
+- $b^{[m]}$ is fit to pseudo residuals $\rmm$ w.r.t. $\hat{g}^{[m-1]}$ instead of $\fmh$
+- $b^{[m]}_{\text{cor}}$ is fit to error-corrected pseudo residuals: $$c^{[m](i)} = \rmi + \frac{m}{m+1}(c^{[m-1](i)} - \hat{b}_{\text{cor}}^{[m-1]}(\xi)),$$ with $i = 1, \dots, n$, if $m > 1$ and $\bm{c}^{[m]} = \rmm$ if $m = 0$.
+
+
+
+## Adapting AGBM for CWB
+
+In \citet{schalk2022accelerated}, we proposed an accelerated CWB (ACWB) version by incorporating these adaptions to CWB, therefore:
+
+- Both base learners, $b^{[m]}$ and $b^{[m]}_{\text{cor}}$, are the result of a selection process that chooses one of $b_1, \dots, b_K$ w.r.t. to the minimal SSE on the respective pseudo residuals $\rmm$ and $\bm{c}^{[m]}$.
+- Update the estimated parameters accordingly to allow the estimation of partial feature effects.
+
+Considering these issues allows to maintain all advantages of CWB in ACWB. We refer to the publication for details about the algorithms.
+
+## Hybrid CWB
+
+- We observed, that ACWB can overfit if not stopped early.
+- Therefore, we combined ACWB with CWB to accelerate the fitting in the beginning and fine-tune the model using CWB:
+
+\begin{figure}
+\centering
+\includegraphics[width=0.7\textwidth]{figures/fig-optim-emp-risk.pdf}
+\end{figure}
+
+# Memory
+
+## Base learner design matrix
+
+- Each base learner $b_1, \dots, b_K$ requires to build a design matrix $\bm{Z}_k\in\mathbb{R}^{n\times d_k}$ based on the feature vector $\bm{x}_k$.
+- For example:
+
+\vspace{-0.4cm}
+\begin{minipage}{0.75\textwidth}
+{\tiny $
+\bm{Z}_{\text{age}} = \begin{pmatrix}
+    0 & 0 & 0 & 0 & 0 & 0 & 0  \\
+    0.02 & 0.45 & 0.51 & 0.03 & 0 & 0 & 0 \\
+    & & & \vdots & & & \\
+    0.13 & 0.66 & 0.21 & 0 & 0 & 0 & 0 \\
+    & 0 & 0 & 0 & 0.03 & 0.53 & 0.43 & 0.01
+\end{pmatrix}
+$}\hspace{0.2cm}{\Large $\Rightarrow$}
+\end{minipage}
+\begin{minipage}{0.2\textwidth}
+\phantom{a}\vspace{0.4cm}\hspace*{0.5cm}
+```{r, echo=FALSE, fig.width=2, fig.height=1.6, out.width="3cm"}
+ggage
+```
+\end{minipage}
+
+$\Rightarrow$ If $n$ is large, the memory gets filled very fast.
+
+## Binning
+
+- To reduce the memory consumption, we applied binning to operate on a reduced representation of $\bm{Z}_k$.
+- Binning is a technique that allows to represent the $n$ values $x_k^{(1)}, \dots, x_k^{(n)}$ of $\xv_k$ by $n^\ast < n$ design points $\bm{z}_k = (z_k^{(1)}, \dots, z_k^{(n^\ast)})$.
+- The idea is to assign each $x_k^{(i)}$ to the closest design point $z_k^{(i)}$ and store the assignment in a map $\text{ind}_k^{(i)}$: $x_k^{(i)} \approx z_k^{(\text{ind}_k^{(i)})}$
+
+```{r, echo=FALSE, fig.width=4, fig.height=0.8, out.width="9cm", fig.align="center"}
+xager = sample(xage, 20)
+zage = seq(min(xager), max(xager), length.out = 5)
+xagerb = vapply(xager, FUN.VALUE = numeric(1), FUN = function(x) zage[which.min(abs(x - zage))])
+
+dfpl = data.frame(x = xager, z = xagerb)
+dfd = data.frame(x = zage)
+
+ggplot() +
+  geom_segment(data = dfpl, aes(x = x, xend = z, y = 1, yend = 0), alpha = 0.5) +
+  geom_point(data = dfpl, aes(x = x, y = 1)) +
+  geom_point(data = dfpl, aes(x = z, y = 0)) +
+  geom_point(data = dfd, aes(x = x, y = 0)) +
+  theme_minimal() +
+  xlab("Age") + ylab("") +
+  scale_y_continuous(limits = c(-0.2, 1.2),
+    breaks = c(0, 1),
+    labels = expression(paste("Design points ", z[k]), paste("Feature values ", x[k])))
+
+```
+
+
+## Binning in GLMs
+
+- \citet{lang2014multilevel} used binning to discretize feature vectors to increase the efficiency of multilevel structured additive regression.
+
+- \citet{wood2017gigadata} applied binning to fit GAMs to gigadata and argue that the best approximation is achieved by setting $n^\ast = \sqrt{n}$.
+- \citet{li2020faster} presented optimized cross-product operations of design matrices based on binned features.
+- Besides the memory reduction, these operations further speed up the runtime.
+
+## Binning in CWB
+
+- Represent numerical features $\bm{x}_k$ by $n^\ast$ design points $\bm{z}_k$.
+- Build the design matrix $\bm{Z}_k$ based on $\bm{z}_k$ which requires to store $n^\ast d_k$ values instead of $nd_k$.
+- Use optimized cross-product operations to estimate the parameters $\tbh_k^{[m]} = (\bm{Z}_k^\tran \bm{Z}_k + \bm{K}_k)^{-1}\bm{Z}_k^\tran \rmm$  of a base learner to also speed up the fitting.
+
+# Application to data
+
+## Benchmark
+
+\begin{figure}
+\centering
+\includegraphics[width=\textwidth]{figures/fig-eq2-2.pdf}
+\end{figure}
+
+## Binning with big data
+
+- HIGGS: $11 \times 10^6$ observations, $29$ features, 2.4 GB
+- NYC Yellow Taxi Trip: $24.3 \times 10^6$ observations, $22$ features, 3.3 GB
+- FEMA’s National Flood Insurance Policy Database: $14.5 \times 10^6$ observations, $50$ features, 3.4 GB
+
+\begin{figure}
+\centering
+\includegraphics[width=0.8\textwidth]{figures/app-big-data.pdf}
+\end{figure}
+
+# References
+
+## {.allowframebreaks .plain}
+
+\footnotesize
+\bibliographystyle{apalike}
+\bibliography{references.bib}
+
