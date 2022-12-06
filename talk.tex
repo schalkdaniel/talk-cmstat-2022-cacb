@@ -340,8 +340,8 @@ representation and momentum-based optimization}
   Utilizing interpretable statistical models as base learners makes the
   fitted model interpretable.
 \item
-  Also, CWB is can fit models in high dimensional features spaces and
-  provides an inherent (unbiased) feature selection.
+  Also, CWB is can fit models in high dimensional features spaces
+  (\(n \ll p\)) and provides an inherent (unbiased) feature selection.
 \item
   But, depending on the size of the data, it is infeasible to fit the
   algorithm w.r.t runtime or memory allocation.
@@ -461,32 +461,18 @@ representation and momentum-based optimization}
 \end{algorithm}
 \end{frame}
 
-\begin{frame}{CWB advantages}
-\protect\hypertarget{cwb-advantages}{}
-\begin{itemize}
-\tightlist
-\item
-  Can be fit in high dimensional feature spaces (\(n \ll p\)).
-\item
-  Variable selection (unbiased).
-\item
-  Estimation of partial feature effect that allows an interpretation of
-  the final model.
-\end{itemize}
-\end{frame}
-
-\begin{frame}{Goal}
-\protect\hypertarget{goal}{}
-For bigger data sets it is often infeasible to fit CWB.
-
+\begin{frame}{Goal of the project}
+\protect\hypertarget{goal-of-the-project}{}
 \(\Rightarrow\) Increase CWB's efficiency:
 
 \begin{itemize}
 \tightlist
 \item
-  \textbf{Acceleration:} Fasten the fitting by using other optimizer.
+  \textbf{Acceleration:} Fasten the fitting process by using Nesterovs
+  momentum.
 \item
-  \textbf{Memory:} Reduce the memory consumption.
+  \textbf{Memory:} Reduce the memory consumption by discretizing
+  numerical features.
 \end{itemize}
 \end{frame}
 
@@ -720,11 +706,12 @@ $}\hspace{0.2cm}{\Large $\Rightarrow$}
 \end{figure}
 \end{frame}
 
-\hypertarget{references}{%
-\section{References}\label{references}}
+\begin{frame}[plain]{}
+\protect\hypertarget{section}{}
+\end{frame}
 
 \begin{frame}[allowframebreaks,plain]{}
-\protect\hypertarget{section}{}
+\protect\hypertarget{section-1}{}
 \footnotesize
 \bibliographystyle{apalike}
 \bibliography{references.bib}

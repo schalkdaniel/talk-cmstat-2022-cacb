@@ -84,7 +84,7 @@ ggcountry = ggplot(dfcountry, aes(x, y)) + geom_boxplot() + xlab("country") + yl
 
 - Component-wise boosting \citep[CWB;][]{buhlmann2003boosting,buhlmann2007boosting} is a boosting method based on multiple base learners.
 - Utilizing interpretable statistical models as base learners makes the fitted model interpretable.
-- Also, CWB is can fit models in high dimensional features spaces and provides an inherent (unbiased) feature selection.
+- Also, CWB is can fit models in high dimensional features spaces ($n \ll p$) and provides an inherent (unbiased) feature selection.
 - But, depending on the size of the data, it is infeasible to fit the algorithm w.r.t runtime or memory allocation.
 
 \begin{itemize}
@@ -155,20 +155,12 @@ ggage + ggincome + ggcountry
 \end{algorithm}
 ```
 
-## CWB advantages
-
-- Can be fit in high dimensional feature spaces ($n \ll p$).
-- Variable selection (unbiased).
-- Estimation of partial feature effect that allows an interpretation of the final model.
-
-## Goal
-
-For bigger data sets it is often infeasible to fit CWB.
+## Goal of the project
 
 $\Rightarrow$ Increase CWB's efficiency:
 
-- __Acceleration:__ Fasten the fitting by using other optimizer.
-- __Memory:__ Reduce the memory consumption.
+- __Acceleration:__ Fasten the fitting process by using Nesterovs momentum.
+- __Memory:__ Reduce the memory consumption by discretizing numerical features.
 
 # Acceleration
 
@@ -334,7 +326,7 @@ ggplot() +
 \includegraphics[width=0.8\textwidth]{figures/app-big-data.pdf}
 \end{figure}
 
-# References
+## {.plain}
 
 ## {.allowframebreaks .plain}
 
