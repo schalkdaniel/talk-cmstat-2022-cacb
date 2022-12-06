@@ -629,8 +629,9 @@ $}\hspace{0.2cm}{\Large $\Rightarrow$}
 
 \includegraphics[width=3cm]{figures/unnamed-chunk-2-1} 
 \end{minipage}
-
-\(\Rightarrow\) If \(n\) is large, the memory gets filled very fast.
+\begin{itemize}
+\item[$\Rightarrow$] If $n$ is large, the memory gets filled very fast (especially if $p$ is also large).
+\end{itemize}
 \end{frame}
 
 \begin{frame}{Binning}
@@ -667,10 +668,7 @@ $}\hspace{0.2cm}{\Large $\Rightarrow$}
   \(n^\ast = \sqrt{n}\).
 \item
   \citet{li2020faster} presented optimized cross-product operations of
-  design matrices based on binned features.
-\item
-  Besides the memory reduction, these operations further speed up the
-  runtime.
+  binned design matrices to also speed up the fitting.
 \end{itemize}
 \end{frame}
 

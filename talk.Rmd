@@ -269,8 +269,9 @@ $}\hspace{0.2cm}{\Large $\Rightarrow$}
 ggage
 ```
 \end{minipage}
-
-$\Rightarrow$ If $n$ is large, the memory gets filled very fast.
+\begin{itemize}
+\item[$\Rightarrow$] If $n$ is large, the memory gets filled very fast (especially if $p$ is also large).
+\end{itemize}
 
 ## Binning
 
@@ -305,8 +306,7 @@ ggplot() +
 - \citet{lang2014multilevel} used binning to discretize feature vectors to increase the efficiency of multilevel structured additive regression.
 
 - \citet{wood2017gigadata} applied binning to fit GAMs to gigadata and argue that the best approximation is achieved by setting $n^\ast = \sqrt{n}$.
-- \citet{li2020faster} presented optimized cross-product operations of design matrices based on binned features.
-- Besides the memory reduction, these operations further speed up the runtime.
+- \citet{li2020faster} presented optimized cross-product operations of binned design matrices to also speed up the fitting.
 
 ## Binning in CWB
 
