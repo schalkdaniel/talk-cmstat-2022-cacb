@@ -1,7 +1,7 @@
 ---
 title: Accelerated component-wise gradient boosting using efficient data representation and momentum-based optimization
 author: D. Schalk, B. Bischl, D. Rügamer
-date: 17th, Dec. 2022
+date: 18th, Dec. 2022
 output:
   beamer_presentation:
     keep_tex: true
@@ -85,43 +85,43 @@ ggcountry = ggplot(dfcountry, aes(x, y)) + geom_boxplot() + xlab("country") + yl
 - Component-wise boosting \citep[CWB;][]{buhlmann2003boosting,buhlmann2007boosting} is a method that ensembles weak base learners to a strong learner.
 - Utilizing interpretable statistical models as base learners makes the fitted model interpretable.
 - Also, CWB can fit models in high dimensional features spaces ($n \ll p$) and provides an inherent (unbiased) feature selection.
-- But, depending on the size of the data, it is infeasible to fit the algorithm w.r.t runtime or memory allocation.
+- But, depending on the size of the data, it is infeasible to train the algorithm w.r.t runtime or memory allocation.
 
 \begin{itemize}
-\item[$\Rightarrow$] \textbf{Goal:} Speed up the fitting process and reduce the memory consumption without loosing predictive or estimation accuracy.
+\item[$\Rightarrow$] \textbf{Goal:} Speed up the fitting process and reduce the memory consumption without loosing predictive or estimation accuracy \citep{schalk2022accelerated}.
 \end{itemize}
 
-## CWB basics I
+## CWB basics
 
 - Feature vector $\bm{x} = (x_1, \dots, x_p)\in\mathcal{X}$
 - CWB fits a model $\fh$ based on an additive structure $$\mathbb{E}[Y|\bm{x}] = \fh(\bm{x}) = f_0 + \sum_{k=1}^K b_k(\bm{x}).$$ Hence, CWB can be used as fitting engine for GAMs.
-- $K$ additive terms represented by base learner $b_k : \mathcal{X} \to \mathbb{R}$. Often one base learner per feature is used to model univariate effects.
+- $K$ additive terms represented by base learner $b_k : \mathcal{X} \to \mathbb{R}$. Often, one base learner per feature is used to model univariate effects.
 
 
-## CWB basics II
+## Example
 
-- Example throughout the talk:
-    - Three features $x_{\text{age}}$, $x_{\text{country}}$, and $x_{\text{income}}$
-    - Response $Y$ is a numeric score for "happiness"
-    - Aim: Model $Y$ with $b_{\text{age}}$ a P-spline, $b_{\text{income}}$ a P-spline and $b_{\text{country}}$ a categorical effect
+- Three features $x_{\text{age}}$, $x_{\text{country}}$, and $x_{\text{income}}$
+- Response $Y$ is a numeric score for "happiness"
+- Aim: Model $Y$ with $b_{\text{age}}$ a P-spline, $b_{\text{income}}$ a P-spline and $b_{\text{country}}$ a categorical effect
 
 ```{r, echo=FALSE, fig.width=9, fig.height=2, out.widht="0.9\textwidth", fig.align="center"}
 ggage + ggincome + ggcountry
 ```
+
+- Model: $\hat{f}(\bm{x}) = f_0 + b_{\text{age}}(\bm{x}) + b_{\text{income}}(\bm{x}) + b_{\text{country}}(\bm{x})$
 
 ## CWB algorithm I
 
 - Given is a data set $\D$ with $n$ observations and $p$ features, a loss function $L(y, \hat{y})$, and a set of base learners $b_1, \dots, b_\blK$.
 - The gaol of fitting CWB is to minimize the empirical risk $\riske(\fh | \D) = n^{-1}\sum_{(x,y)\in\D} L(y, \fh(x))$.
 - The algorithm is initialized with a loss-optimal constant $c$ that minimizes the empirical risk: $$f_0 = \fh^{[0]}(\xv) = \argmin_{c\in\mathcal{Y}}\riske(c|\D)$$
-- Model updates are calculated by functional gradient descent: $$\fh^{[m+1]} = \fmh + \nu \hat{b}^{[m]}$$
+- Model updates in iteration $m\in\mathbb{N}$ are calculated by applying functional gradient descent: $$\fh^{[m+1]} = \fmh + \nu \hat{b}^{[m]}$$
 
 ## CWB algorithm II
 
 - The negative functional gradient is expressed by pseudo residuals: $$\rmi = -\nabla_f L(y^{(i)}, f(\xi))|_{f = \fmdh},\ i \in \{1, \dots, n\}$$
 - In CWB, each base learner $b_1, \dots, b_K$ is fitted to $\rmm$ and the one with the lowest sum of squared errors (SSE) is chosen as new component $\hat{b}^{[m]}$.
 - The last two step are repeated $M$ times.
-
 
 ## CWB algorithm III
 
@@ -134,7 +134,7 @@ ggage + ggincome + ggcountry
 \vspace{0.15cm}
 \hspace*{\algorithmicindent} \textbf{Input} Train data $\D$, learning rate $\nu$, number of boosting iterations $M$, loss\\
 \hspace*{\algorithmicindent} \phantom{\textbf{Input} } function $L$, base learners $b_1, \dots, b_\blK$\\
-\hspace*{\algorithmicindent} \textbf{Output} Model $\fh = \hat{f}^{[M]}$, estimated coefficient vectors $\tbih{1}, \ldots, \tbih{M}$\vspace{0.15cm}
+\hspace*{\algorithmicindent} \textbf{Output} Model $\fh = \hat{f}^{[M]}$%, estimated coefficient vectors $\tbih{1}, \ldots, \tbih{M}$\vspace{0.15cm}
 \hrule
 
 \begin{algorithmic}[1]
@@ -154,6 +154,9 @@ ggage + ggincome + ggcountry
 \end{algorithmic}
 \end{algorithm}
 ```
+
+
+
 
 ## Goal of the project
 
@@ -186,7 +189,7 @@ __Nesterov momentum:__
 {\small
 \begin{tabular}{ccc}
   Parameter space & & Function space \\[0.3cm]
-  $\bm{u}^{[m]} = \nabla_{\tb}\riske(\fh(. | \tbh^{[m]} - \gamma \hat{\bm{\vartheta}}^{[m-1]} | \D)$ &  & \\
+  $\bm{u}^{[m]} = \nabla_{\tb}\riske(\fh(. | \tbh^{[m]} - \gamma \hat{\bm{\vartheta}}^{[m-1]}) | \D)$ &  & \\
   $\hat{\bm{\vartheta}}^{[m]} = \gamma \hat{\bm{\vartheta}}^{[m-1]} + \nu \bm{u}^{[m]}$ & $\Rightarrow$ & ??? \\
   $\tbh^{[m+1]} = \tbh^{[m]} + \hat{\bm{\vartheta}}^{[m]}$ & &
 \end{tabular}}
@@ -194,7 +197,7 @@ __Nesterov momentum:__
 ```
 
 \begin{itemize}
-\item[$\Rightarrow$] \textbf{Idea:} Use Nestervos momentum and adjust it for functional updates and CWB.
+\item[$\Rightarrow$] \textbf{Idea:} Use Nesterovs momentum and adjust it for functional updates and CWB.
 \end{itemize}
 
 ## Nesterovs momentum in function space
@@ -226,7 +229,7 @@ In \citet{schalk2022accelerated}, we proposed an accelerated CWB (ACWB) version 
 - Both base learners, $b^{[m]}$ and $b^{[m]}_{\text{cor}}$, are the result of a selection process that chooses one of $b_1, \dots, b_K$ w.r.t. to the minimal SSE on the respective pseudo residuals $\rmm$ and $\bm{c}^{[m]}$.
 - Update the estimated parameters accordingly to allow the estimation of partial feature effects.
 
-Considering these techniques allows to maintain all advantages of CWB in ACWB. We refer to the publication for details about the algorithms.
+Considering these points allows to maintain all advantages of CWB in ACWB. We refer to the publication for details about the algorithms.
 
 ## Hybrid CWB
 
@@ -354,11 +357,35 @@ ggage
 \includegraphics[width=0.8\textwidth]{figures/app-big-data.pdf}
 \end{figure}
 
+# Summary
+
+## Summary
+
+- It may be infeasible to train CWB to large amounts of data.
+- Two adaptions aim to increase the efficiency without sacrificing performance:
+    - __Optimizer:__ Incorporating Nesterovs momentum speed up the fitting.
+    - __Memory:__ Building the design matrix of a base learner on binned data points reduces the memory load.
+
+## Summary
+
+- More details about the theory, simulation studies, and benchmarks can be found in our paper:
+```{=latex}
+{\centering\hspace{0.5cm}\includegraphics[width=0.9\textwidth]{figures/cacb-paper.png}}
+```
+
 ## {.plain}
+
+\begin{center}
+\Large{Thanks for your attention!} \\
+\Large{Questions?}
+\end{center}
 
 ## {.allowframebreaks .plain}
 
 \footnotesize
 \bibliographystyle{apalike}
 \bibliography{references.bib}
+
+
+
 

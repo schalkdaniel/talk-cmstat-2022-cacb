@@ -317,7 +317,7 @@
 \title{Accelerated component-wise gradient boosting using efficient data
 representation and momentum-based optimization}
 \author{D. Schalk, B. Bischl, D. Rügamer}
-\date{17th, Dec.~2022}
+\date{18th, Dec.~2022}
 
 \begin{document}
 \begin{frame}[plain]
@@ -343,17 +343,17 @@ representation and momentum-based optimization}
   Also, CWB can fit models in high dimensional features spaces
   (\(n \ll p\)) and provides an inherent (unbiased) feature selection.
 \item
-  But, depending on the size of the data, it is infeasible to fit the
+  But, depending on the size of the data, it is infeasible to train the
   algorithm w.r.t runtime or memory allocation.
 \end{itemize}
 
 \begin{itemize}
-\item[$\Rightarrow$] \textbf{Goal:} Speed up the fitting process and reduce the memory consumption without loosing predictive or estimation accuracy.
+\item[$\Rightarrow$] \textbf{Goal:} Speed up the fitting process and reduce the memory consumption without loosing predictive or estimation accuracy \citep{schalk2022accelerated}.
 \end{itemize}
 \end{frame}
 
-\begin{frame}{CWB basics I}
-\protect\hypertarget{cwb-basics-i}{}
+\begin{frame}{CWB basics}
+\protect\hypertarget{cwb-basics}{}
 \begin{itemize}
 \tightlist
 \item
@@ -364,33 +364,34 @@ representation and momentum-based optimization}
   Hence, CWB can be used as fitting engine for GAMs.
 \item
   \(K\) additive terms represented by base learner
-  \(b_k : \mathcal{X} \to \mathbb{R}\). Often one base learner per
+  \(b_k : \mathcal{X} \to \mathbb{R}\). Often, one base learner per
   feature is used to model univariate effects.
 \end{itemize}
 \end{frame}
 
-\begin{frame}{CWB basics II}
-\protect\hypertarget{cwb-basics-ii}{}
+\begin{frame}{Example}
+\protect\hypertarget{example}{}
 \begin{itemize}
 \tightlist
 \item
-  Example throughout the talk:
-
-  \begin{itemize}
-  \tightlist
-  \item
-    Three features \(x_{\text{age}}\), \(x_{\text{country}}\), and
-    \(x_{\text{income}}\)
-  \item
-    Response \(Y\) is a numeric score for ``happiness''
-  \item
-    Aim: Model \(Y\) with \(b_{\text{age}}\) a P-spline,
-    \(b_{\text{income}}\) a P-spline and \(b_{\text{country}}\) a
-    categorical effect
-  \end{itemize}
+  Three features \(x_{\text{age}}\), \(x_{\text{country}}\), and
+  \(x_{\text{income}}\)
+\item
+  Response \(Y\) is a numeric score for ``happiness''
+\item
+  Aim: Model \(Y\) with \(b_{\text{age}}\) a P-spline,
+  \(b_{\text{income}}\) a P-spline and \(b_{\text{country}}\) a
+  categorical effect
 \end{itemize}
 
 \begin{center}\includegraphics{figures/unnamed-chunk-1-1} \end{center}
+
+\begin{itemize}
+\tightlist
+\item
+  Model:
+  \(\hat{f}(\bm{x}) = f_0 + b_{\text{age}}(\bm{x}) + b_{\text{income}}(\bm{x}) + b_{\text{country}}(\bm{x})\)
+\end{itemize}
 \end{frame}
 
 \begin{frame}{CWB algorithm I}
@@ -409,7 +410,8 @@ representation and momentum-based optimization}
   minimizes the empirical risk:
   \[f_0 = \fh^{[0]}(\xv) = \argmin_{c\in\mathcal{Y}}\riske(c|\D)\]
 \item
-  Model updates are calculated by functional gradient descent:
+  Model updates in iteration \(m\in\mathbb{N}\) are calculated by
+  applying functional gradient descent:
   \[\fh^{[m+1]} = \fmh + \nu \hat{b}^{[m]}\]
 \end{itemize}
 \end{frame}
@@ -440,7 +442,7 @@ representation and momentum-based optimization}
 \vspace{0.15cm}
 \hspace*{\algorithmicindent} \textbf{Input} Train data $\D$, learning rate $\nu$, number of boosting iterations $M$, loss\\
 \hspace*{\algorithmicindent} \phantom{\textbf{Input} } function $L$, base learners $b_1, \dots, b_\blK$\\
-\hspace*{\algorithmicindent} \textbf{Output} Model $\fh = \hat{f}^{[M]}$, estimated coefficient vectors $\tbih{1}, \ldots, \tbih{M}$\vspace{0.15cm}
+\hspace*{\algorithmicindent} \textbf{Output} Model $\fh = \hat{f}^{[M]}$%, estimated coefficient vectors $\tbih{1}, \ldots, \tbih{M}$\vspace{0.15cm}
 \hrule
 
 \begin{algorithmic}[1]
@@ -497,14 +499,14 @@ representation and momentum-based optimization}
 {\small
 \begin{tabular}{ccc}
   Parameter space & & Function space \\[0.3cm]
-  $\bm{u}^{[m]} = \nabla_{\tb}\riske(\fh(. | \tbh^{[m]} - \gamma \hat{\bm{\vartheta}}^{[m-1]} | \D)$ &  & \\
+  $\bm{u}^{[m]} = \nabla_{\tb}\riske(\fh(. | \tbh^{[m]} - \gamma \hat{\bm{\vartheta}}^{[m-1]}) | \D)$ &  & \\
   $\hat{\bm{\vartheta}}^{[m]} = \gamma \hat{\bm{\vartheta}}^{[m-1]} + \nu \bm{u}^{[m]}$ & $\Rightarrow$ & ??? \\
   $\tbh^{[m+1]} = \tbh^{[m]} + \hat{\bm{\vartheta}}^{[m]}$ & &
 \end{tabular}}
 \vspace{0.2cm}
 
 \begin{itemize}
-\item[$\Rightarrow$] \textbf{Idea:} Use Nestervos momentum and adjust it for functional updates and CWB.
+\item[$\Rightarrow$] \textbf{Idea:} Use Nesterovs momentum and adjust it for functional updates and CWB.
 \end{itemize}
 \end{frame}
 
@@ -563,7 +565,7 @@ version by incorporating these adaptions to CWB, therefore:
   partial feature effects.
 \end{itemize}
 
-Considering these techniques allows to maintain all advantages of CWB in
+Considering these points allows to maintain all advantages of CWB in
 ACWB. We refer to the publication for details about the algorithms.
 \end{frame}
 
@@ -731,8 +733,49 @@ $}\hspace{0.2cm}{\Large $\Rightarrow$}
 \end{figure}
 \end{frame}
 
+\hypertarget{summary}{%
+\section{Summary}\label{summary}}
+
+\begin{frame}{Summary}
+\protect\hypertarget{summary-1}{}
+\begin{itemize}
+\tightlist
+\item
+  It may be infeasible to train CWB to large amounts of data.
+\item
+  Two adaptions aim to increase the efficiency without sacrificing
+  performance:
+
+  \begin{itemize}
+  \tightlist
+  \item
+    \textbf{Optimizer:} Incorporating Nesterovs momentum speed up the
+    fitting.
+  \item
+    \textbf{Memory:} Building the design matrix of a base learner on
+    binned data points reduces the memory load.
+  \end{itemize}
+\end{itemize}
+\end{frame}
+
+\begin{frame}{Summary}
+\protect\hypertarget{summary-2}{}
+\begin{itemize}
+\tightlist
+\item
+  More details about the theory, simulation studies, and benchmarks can
+  be found in our paper:
+\end{itemize}
+
+{\centering\hspace{0.5cm}\includegraphics[width=0.9\textwidth]{figures/cacb-paper.png}}
+\end{frame}
+
 \begin{frame}[plain]{}
 \protect\hypertarget{section}{}
+\begin{center}
+\Large{Thanks for your attention!} \\
+\Large{Questions?}
+\end{center}
 \end{frame}
 
 \begin{frame}[allowframebreaks,plain]{}
