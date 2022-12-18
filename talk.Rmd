@@ -181,7 +181,7 @@ __Gradient descent:__
 \vspace{0.2cm}
 ```
 
-__Nesterov momentum:__
+__Nesterovs momentum:__
 
 
 ```{=latex}
@@ -203,7 +203,7 @@ __Nesterov momentum:__
 ## Nesterovs momentum in function space
 
 - \citet{biau2019accelerated} proposed an adjustment of gradient boosting with Nesterovs momentum as optimizer.
-- \citet{lu2020accelerating} lined out that this approach may diverge and proposed an corrected algorithm Accelerated Gradient Boosting Machine (AGBM):
+- \citet{lu2020accelerating} lined out that this approach may diverge and proposed a corrected algorithm Accelerated Gradient Boosting Machine (AGBM):
 ```{=latex}
 \vspace{-0.9cm}
 \begin{align*}
